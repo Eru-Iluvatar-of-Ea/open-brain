@@ -11,14 +11,18 @@ All Supabase commands run from `Open-Brain/Supabase/`:
 supabase start
 supabase stop
 
-# Develop function locally (hot reload)
+# Develop function locally (hot reload, per_worker policy)
 supabase functions serve open-brain-mcp
+
+# Type-check / lint (run from Supabase/functions/)
+deno check open-brain-mcp/index.ts
+deno lint open-brain-mcp/index.ts
 
 # Deploy to production
 supabase functions deploy open-brain-mcp
 ```
 
-The VS Code Deno extension is scoped to `Supabase/functions/` — run `deno lint` or `deno check` from there if needed.
+Local secrets live in `Supabase/.env.local` (not committed). The VS Code Deno extension is scoped to `Supabase/functions/`.
 
 ## Architecture
 
@@ -50,4 +54,8 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 
 **Import map:** `deno.json` pins all npm deps. No lock file — versions are fixed in `deno.json` directly.
 
-**JWT:** `verify_jwt = true` in `config.toml` — Supabase JWT verification is on in addition to the custom `x-brain-key` check.
+**Two-layer auth:** Every request must pass both Supabase JWT verification (`verify_jwt = true` in `config.toml`) and the custom `x-brain-key` header / `?key=` param check against `MCP_ACCESS_KEY`. Supabase handles JWT first; the function handles the key.
+
+**`capture_thought` write path detail:** embedding and metadata are fetched in parallel via `Promise.all`, then `upsert_thought` RPC runs, and finally a separate `supabase.from("thoughts").update({ embedding })` call writes the vector. Two round-trips are required because the RPC doesn't accept the embedding column directly.
+
+**Claude Desktop header workaround:** `StreamableHTTPTransport` requires `Accept: text/event-stream`. Claude Desktop connectors omit it, so the Hono handler reconstructs the raw `Request` with the header patched in before handing off to the transport (see the `duplex: "half"` comment at index.ts:540).
