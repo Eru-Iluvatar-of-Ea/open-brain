@@ -409,7 +409,11 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.open-brain-mcp]
 enabled = true
-verify_jwt = true
+# MCP clients (Claude Desktop/claude.ai) can't send a Supabase JWT. With JWT
+# verification on, the gateway 401s before the function runs, and Claude
+# misreads that challenge as an OAuth requirement. The function does its own
+# auth via the x-brain-key header / ?key= param against MCP_ACCESS_KEY.
+verify_jwt = false
 import_map = "./functions/open-brain-mcp/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
