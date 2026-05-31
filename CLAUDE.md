@@ -54,7 +54,7 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 
 **Import map:** `deno.json` pins all npm deps. No lock file — versions are fixed in `deno.json` directly.
 
-**Two-layer auth:** Every request must pass both Supabase JWT verification (`verify_jwt = true` in `config.toml`) and the custom `x-brain-key` header / `?key=` param check against `MCP_ACCESS_KEY`. Supabase handles JWT first; the function handles the key.
+**Auth — single layer (`x-brain-key`):** JWT verification is intentionally **off** (`verify_jwt = false` in `config.toml`, `[functions.open-brain-mcp]`). MCP clients (Claude Desktop / claude.ai) can't send a Supabase JWT; with verification on, the gateway 401s before the function runs and Claude misreads the challenge as an OAuth requirement. So the function is the *only* auth gate: it checks `x-brain-key` header or `?key=` query param against `MCP_ACCESS_KEY` (index.ts:524). Do not flip `verify_jwt` back on without a JWT-capable client.
 
 **`capture_thought` write path detail:** embedding and metadata are fetched in parallel via `Promise.all`, then `upsert_thought` RPC runs, and finally a separate `supabase.from("thoughts").update({ embedding })` call writes the vector. Two round-trips are required because the RPC doesn't accept the embedding column directly.
 
