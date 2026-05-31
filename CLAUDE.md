@@ -48,7 +48,8 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 - `OPEN_BRAIN_CITATION_BASE_URL` — optional base URL for thought citation links (defaults to `https://openbrain.local/thoughts`)
 
 **Database schema (inferred from RPC calls):**
-- `thoughts` table: `id`, `content`, `metadata` (JSONB with `type`, `topics`, `people`, `action_items`), `embedding` (vector), `created_at`, `updated_at`
+- `thoughts` table: `id`, `content`, `metadata` (JSONB), `embedding` (vector), `created_at`, `updated_at`
+- `metadata` JSONB keys (written by `extractMetadata`): `type`, `topics[]`, `people[]`, `action_items[]`, `dates_mentioned[]`, plus `source` (set to `"mcp"` on capture). `type` is a fixed enum: `observation | task | idea | reference | person_note` — `list_thoughts` type/topic/person filters rely on this vocabulary via Postgres JSONB `contains` (array membership), so values must match exactly.
 - `match_thoughts(query_embedding, match_threshold, match_count, filter)` — pgvector similarity search RPC
 - `upsert_thought(p_content, p_payload)` — dedup + insert RPC, returns `{ id }`
 
@@ -56,6 +57,6 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 
 **Auth — single layer (`x-brain-key`):** JWT verification is intentionally **off** (`verify_jwt = false` in `config.toml`, `[functions.open-brain-mcp]`). MCP clients (Claude Desktop / claude.ai) can't send a Supabase JWT; with verification on, the gateway 401s before the function runs and Claude misreads the challenge as an OAuth requirement. So the function is the *only* auth gate: it checks `x-brain-key` header or `?key=` query param against `MCP_ACCESS_KEY` (index.ts:524). Do not flip `verify_jwt` back on without a JWT-capable client.
 
-**`capture_thought` write path detail:** embedding and metadata are fetched in parallel via `Promise.all`, then `upsert_thought` RPC runs, and finally a separate `supabase.from("thoughts").update({ embedding })` call writes the vector. Two round-trips are required because the RPC doesn't accept the embedding column directly.
+**`capture_thought` write path detail:** embedding (`text-embedding-3-small`) and metadata (`gpt-4o-mini`, JSON mode) are fetched in parallel via `Promise.all`, then `upsert_thought` RPC runs with `source: "mcp"` merged into metadata, and finally a separate `supabase.from("thoughts").update({ embedding })` call writes the vector. Two round-trips are required because the RPC doesn't accept the embedding column directly. If metadata JSON parsing fails, it falls back to `{ topics: ["uncategorized"], type: "observation" }` rather than erroring.
 
 **Claude Desktop header workaround:** `StreamableHTTPTransport` requires `Accept: text/event-stream`. Claude Desktop connectors omit it, so the Hono handler reconstructs the raw `Request` with the header patched in before handing off to the transport (see the `duplex: "half"` comment at index.ts:540).
