@@ -55,8 +55,18 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 
 **Import map:** `deno.json` pins all npm deps. No lock file — versions are fixed in `deno.json` directly.
 
-**Auth — single layer (`x-brain-key`):** JWT verification is intentionally **off** (`verify_jwt = false` in `config.toml`, `[functions.open-brain-mcp]`). MCP clients (Claude Desktop / claude.ai) can't send a Supabase JWT; with verification on, the gateway 401s before the function runs and Claude misreads the challenge as an OAuth requirement. So the function is the *only* auth gate: it checks `x-brain-key` header or `?key=` query param against `MCP_ACCESS_KEY` (index.ts:524). Do not flip `verify_jwt` back on without a JWT-capable client.
+**Auth — single layer (`x-brain-key`):** JWT verification is intentionally **off** (`verify_jwt = false` in `config.toml`, `[functions.open-brain-mcp]`). MCP clients (Claude Desktop / claude.ai) can't send a Supabase JWT; with verification on, the gateway 401s before the function runs and Claude misreads the challenge as an OAuth requirement. So the function is the *only* auth gate: it checks `x-brain-key` header or `?key=` query param against `MCP_ACCESS_KEY` (index.ts:525). Do not flip `verify_jwt` back on without a JWT-capable client.
 
 **`capture_thought` write path detail:** embedding (`text-embedding-3-small`) and metadata (`gpt-4o-mini`, JSON mode) are fetched in parallel via `Promise.all`, then `upsert_thought` RPC runs with `source: "mcp"` merged into metadata, and finally a separate `supabase.from("thoughts").update({ embedding })` call writes the vector. Two round-trips are required because the RPC doesn't accept the embedding column directly. If metadata JSON parsing fails, it falls back to `{ topics: ["uncategorized"], type: "observation" }` rather than erroring.
 
 **Claude Desktop header workaround:** `StreamableHTTPTransport` requires `Accept: text/event-stream`. Claude Desktop connectors omit it, so the Hono handler reconstructs the raw `Request` with the header patched in before handing off to the transport (see the `duplex: "half"` comment at index.ts:540).
+
+## `_guide/` knowledge base
+
+`_guide/` is a prose knowledge base about Open Brain (design rationale, capture strategy, memory model) — not code, and unrelated to the edge function runtime. It uses a checkpoint→compile authoring workflow:
+
+- `_guide/_toc.md` defines the canonical chapter slugs and a one-sentence scope per chapter.
+- `_guide/_staging/` holds dated `checkpoint` notes with frontmatter (`chapters: [slug (new)]`, `tags`, `summary`). Processed ones move to `_staging/processed/`.
+- Compiling merges checkpoints into the chapter files (`memory-architecture.md`, `pipeline-mechanics.md`, `capture-strategy.md`, `extending-the-system.md`) by their `chapters` tag. A checkpoint only proposes a new slug when no existing scope sentence covers it.
+
+When editing guide content, respect the TOC slugs and tag checkpoints against them rather than creating ad-hoc files.
