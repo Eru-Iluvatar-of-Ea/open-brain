@@ -14,15 +14,22 @@ supabase stop
 # Develop function locally (hot reload, per_worker policy)
 supabase functions serve open-brain-mcp
 
-# Type-check / lint (run from Supabase/functions/)
-deno check open-brain-mcp/index.ts
-deno lint open-brain-mcp/index.ts
+# Type-check / lint (run from Supabase/functions/open-brain-mcp/ — running from a
+# parent dir misses the deno.json import map and produces false "not a dependency" errors)
+deno check index.ts
+deno lint index.ts
 
 # Deploy to production
 supabase functions deploy open-brain-mcp
 ```
 
 Local secrets live in `Supabase/.env.local` (not committed). The VS Code Deno extension is scoped to `Supabase/functions/`.
+
+## Workflow rules
+
+- Commit (and push) before `supabase functions deploy` — git should always match what is in production. A global PreToolUse hook asks for confirmation if the tree is dirty at deploy time.
+- When changing tool behavior (defaults, limits, output shape), change it in the edge function, not per-client — one server-side fix applies to Claude Desktop, claude.ai, and Claude Code at once.
+- If deploy output reports a newer Supabase CLI version, run `brew upgrade supabase` when convenient.
 
 ## Architecture
 
