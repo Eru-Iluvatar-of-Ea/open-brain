@@ -295,7 +295,7 @@ server.registerTool(
       readOnlyHint: true,
     },
     inputSchema: {
-      limit: z.number().optional().default(10),
+      limit: z.number().optional().describe("Max thoughts to return; omit to return all"),
       type: z.string().optional().describe("Filter by type: observation, task, idea, reference, person_note"),
       topic: z.string().optional().describe("Filter by topic tag"),
       person: z.string().optional().describe("Filter by person mentioned"),
@@ -307,9 +307,9 @@ server.registerTool(
       let q = supabase
         .from("thoughts")
         .select("content, metadata, created_at")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+        .order("created_at", { ascending: false });
 
+      if (limit) q = q.limit(limit);
       if (type) q = q.contains("metadata", { type });
       if (topic) q = q.contains("metadata", { topics: [topic] });
       if (person) q = q.contains("metadata", { people: [person] });
