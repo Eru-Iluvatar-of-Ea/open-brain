@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://eru-iluvatar-of-ea.github.io/open-brain/sitemap.xml
