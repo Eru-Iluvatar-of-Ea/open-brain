@@ -1,9 +1,10 @@
 ---
 title: Memory Architecture — push/pull layers, retrieval model, sizing
 chapter: memory-architecture
-compiled: 2026-06-11
+compiled: 2026-06-17
 sources:
   - 2026-06-11--open-brain--memory-layer-sizing-retention--checkpoint--v1.md
+  - 2026-06-17--open-brain--two-layer-memory-model--checkpoint--v1.md
 ---
 
 # Memory Architecture
@@ -15,6 +16,12 @@ sources:
 - Tool invocation is a per-turn judgment call, not a reflex — it can be missed on turns where it would have helped. Client-dependent: Claude Desktop auto-selects well; ChatGPT needs explicit prompting initially.
 - "Up to 10 results" is a ceiling, not a guarantee. Queries with no matches above threshold return fewer or zero. Limit and threshold are adjustable per call.
 - Consequence: anything that must fire on every turn cannot live in Open Brain — it belongs in Layer 1. The division of labor: Layer 1 holds cross-cutting, must-never-miss rules; Open Brain holds everything else, unbounded, at the cost of a tool round-trip. The Amanda/Rivendell in-pocket-latency entry (thought #2) is this line drawn deliberately.
+
+## Open Brain vs Claude Code's own memory
+
+- Reached from Claude Code, Open Brain is an **account-level MCP connector** (server-side, claude.ai): its tools are available on every surface and in every project directory, and its schemas are deferred (loaded on demand), so leaving it attached costs almost nothing per session.
+- Do not confuse Open Brain's pull store with **Claude Code's project file-memory** (`~/.claude/projects/<slug>/memory/`, a `MEMORY.md` index auto-loaded each session *in that project*). That file-memory is a separate Claude-Code feature that behaves like a local push layer — always loaded, silent, per-project — playing the same role *within Claude Code* that Layer 1 plays within Open Brain.
+- The two are **separate systems that do not sync**: a fact in Claude Code's file-memory is not in Open Brain, and vice-versa. Because Open Brain never auto-fires, behavioral preferences and must-fire rules belong in file-memory (or `CLAUDE.md`), not Open Brain — the same push/pull division of labor, drawn again at the Claude Code layer.
 
 ## Sizing
 
