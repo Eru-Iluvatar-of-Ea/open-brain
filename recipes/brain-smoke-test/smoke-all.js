@@ -193,7 +193,17 @@ async function fetchJson(url, init, signal) {
     e.status = res.status;
     throw e;
   }
-  return text ? JSON.parse(text) : null;
+  if (!text) return null;
+  // MCP StreamableHTTPTransport replies as text/event-stream (event:/data: lines)
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("text/event-stream") || text.startsWith("event:")) {
+    const payload = text.split("\n")
+      .filter((l) => l.startsWith("data:"))
+      .map((l) => l.slice(5).trim())
+      .join("");
+    return payload ? JSON.parse(payload) : null;
+  }
+  return JSON.parse(text);
 }
 
 async function tableCount(table, signal, extraQuery = "") {
