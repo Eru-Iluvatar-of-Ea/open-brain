@@ -60,7 +60,7 @@ Single Supabase Edge Function (`Supabase/functions/open-brain-mcp/index.ts`) tha
 - `match_thoughts(query_embedding, match_threshold, match_count, filter)` — pgvector similarity search RPC
 - `upsert_thought(p_content, p_payload)` — dedup + insert RPC, returns `{ id }`
 
-**Import map:** `deno.json` pins all npm deps. No lock file — versions are fixed in `deno.json` directly.
+**Import map & lock:** `deno.json` pins all npm dep versions directly (no version ranges). `deno.lock` (committed) records the full resolved dependency tree — Deno regenerates it on the next `deno check`/`serve`, so after bumping a version in `deno.json`, run a Deno command and commit both files together.
 
 **Auth — single layer (`x-brain-key`):** JWT verification is intentionally **off** (`verify_jwt = false` in `config.toml`, `[functions.open-brain-mcp]`). MCP clients (Claude Desktop / claude.ai) can't send a Supabase JWT; with verification on, the gateway 401s before the function runs and Claude misreads the challenge as an OAuth requirement. So the function is the *only* auth gate: it checks `x-brain-key` header or `?key=` query param against `MCP_ACCESS_KEY` (index.ts:525). Do not flip `verify_jwt` back on without a JWT-capable client.
 
