@@ -421,3 +421,12 @@ entrypoint = "./functions/open-brain-mcp/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/open-brain-mcp/*.html" ]
+
+[functions.open-brain-rest]
+enabled = true
+# REST gateway for the Pro dashboard. Same single-layer auth as open-brain-mcp:
+# the dashboard sends x-brain-key (or ?key=) checked against MCP_ACCESS_KEY, so
+# Supabase JWT verification stays off.
+verify_jwt = false
+import_map = "./functions/open-brain-rest/deno.json"
+entrypoint = "./functions/open-brain-rest/index.ts"
